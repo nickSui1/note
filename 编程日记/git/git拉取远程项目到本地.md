@@ -7,7 +7,17 @@
 - 使用 git remote -v 查看关联的远程仓库
 - git fetch 从远程仓库获取最新的分支和提交信息
 - git pull origin <your current branch>
-- 
+
+### 更新代码建议
+
+- 新建一个分支 git branch <new branch name>
+- checkout 到新分支，git checkout <new branch name>
+- 修改后，git status 查看改动
+- 使用git commit -m "改动详情" 提交
+- git push origin <new branch name>
+- 在github中新建pull request，请求将代码合并到主分支
+- merge pull request，并删除此分支
+- 本地库切换到主分支后删除<new branch name>，pull更新。
 
 ## git 文件路径有中文会乱码的情况
 
