@@ -1,0 +1,19 @@
+## git拉取远程项目到本地
+
+- 在本地磁盘创建一个文件夹用于存储远程项目
+- 在cmd或者terminal中定位到刚才的文件目录
+- 初始化本地git库：git init
+- 关联远程仓库：git remote add origin <your git url>
+- 使用 git remote -v 查看关联的远程仓库
+- git fetch 从远程仓库获取最新的分支和提交信息
+- git pull origin <your current branch>
+- 
+
+## git 文件路径有中文会乱码的情况
+
+在git status时候如果有中文文件，会显示乱码，通过git add xxx的时候也会报错
+
+- git bash 右键选择option > text > 选择zh_cn或者c，后面的label选择utf-8
+- 使用 `git config --global core.quotepath false` 将core.quotepath设置为false，quotepath表示引用路径
+
+完成以上两步就可以使用中文路径了。
