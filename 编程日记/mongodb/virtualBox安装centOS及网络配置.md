@@ -1,0 +1,19 @@
+### virtualBox安装centOS
+- virtualBox是开源的免费虚拟机，直接官网下载，依照引导安装即可
+- 下载centOS或其他linux发行版的iso镜像文件<br>
+使用国内的镜像下载:<br> <http://isoredirect.centos.org/centos/7/isos/x86_64/>
+- 创建虚拟机预留2g内存，20g硬盘，创建成功后，在IDE控制器的光驱中，选择iso文件，将准备好的iso文件导入。
+- 启动虚拟机，按照步骤安装linux即可。
+### 打开linux系统的网络
+- 例如centOS，在安装引导页面配置网络
+- 如果在安装完成后，网络还未开启，可以使用下列指令打开<br>
+ - 进入到以下目录<br>
+`cd /etc/sysconfig/network-scripts`
+ - 编辑ifcfg-enp0s3<br>
+`vi ifcfg-enp0s3`
+ - 修改ONBOOT为yes，自动开启网络连接
+ - 重启服务<br>
+`service network restart`
+ - 查看网络是否打开<br>
+`ip addr`<br>
+如果已开启，可以看到enp0s3下存在 inet网络和ip地址。
