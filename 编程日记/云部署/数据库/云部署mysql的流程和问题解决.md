@@ -236,3 +236,25 @@
 
    - （推荐）您可以通过阿里云提供的数据管理服务DMS（Data Management Service）来远程访问MySQL数据库。具体操作，请参见[云数据库录入](https://help.aliyun.com/zh/dms/register-an-apsaradb-instance-1)。
    - 您可以通过MySQL客户端远程登录MySQL进行测试。例如：MySQL Workbench、Navicat。
+
+
+
+## 写在后面
+
+在阿里云安装mysql，使用root的默认密码登录会失败提示access denied，解决方案如下
+
+（如果skip-grant-tables后登录mysql，修改root密码失败，可以使用以下方案代替）
+
+- 找到my.cnf 配置文件，vi /etc/my.cnf，编辑一行 skip-grant-tables，保存后 systemctl restart mysqld重启mysql服务
+
+- 检查mysql服务 systemctl status mysqld 如果active状态可以继续下一步
+
+- 登录mysql后：因为skip-grant-tables 跳过了权限验证，所以直接敲mysql即可登录mysql
+
+- 创建一个新用户例如：`create user 'admin'@'%' identified with mysql_native_password by 'pwd';`，
+
+  然后给权限，`grant all privileges on *.* to 'admin'@'%';` 给admin用户全部权限。
+
+- 禁用远程登录root用户，`DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');`, quit 切换到admin用户登录，对root用户进行密码修改，`alter user 'root'@'localhost' identified with mysql_native_password by 'pwd';` 如果修改失败，可以先置空密码`update user set authentication_string ='' where user ='root';` 成功后quit
+
+- 这时候将my.cnf的skip-grant-tables禁用，重启mysql服务，这时候登录root用户，发现可以登陆了。
