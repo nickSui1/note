@@ -23,7 +23,17 @@
 
 在git status时候如果有中文文件，会显示乱码，通过git add xxx的时候也会报错
 
+### windows git bash
+
 - git bash 右键选择option > text > 选择zh_cn或者c，后面的label选择utf-8
 - 使用 `git config --global core.quotepath false` 将core.quotepath设置为false，quotepath表示引用路径
 
 完成以上两步就可以使用中文路径了。
+
+### mac terminal
+
+使用命令“git config --global core.quotepath false”解决，即将core.quotepath设为false，就不会对0×80以上的字符进行quote，中文显示正常。具体解决效果如下：
+
+git config --global core.quotepath false
+
+使用 git config -l 可以查看是否生效。

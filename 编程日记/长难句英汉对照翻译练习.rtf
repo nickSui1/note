@@ -1,5 +1,5 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2709
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\rtf1\ansi\ansicpg936\cocoartf2709
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset134 PingFangSC-Regular;}
 {\colortbl;\red255\green255\blue255;}
 {\*\expandedcolortbl;;}
 \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
@@ -8,40 +8,86 @@
 \f0\fs24 \cf0 Configure DataSource Programmatically in Spring Boot\
 There are scenarios where you might need to configure the DataSource programmatically such as when the database connection details are dynamic or need to determine at runtime.\
 \
-\uc0\u26377 \u20960 \u31181 \u38656 \u35201 \u20320 \u32534 \u31243 \u24615 \u30340 \u21435 \u37197 \u32622 \u25968 \u25454 \u28304 \u30340 \u24773 \u20917 \u65292 \u27604 \u22914 \u24403 \u25968 \u25454 \u24211 \u36830 \u25509 \u26159 \u21160 \u24577 \u30340 \u25110 \u32773 \u38656 \u35201 \u22312 \u36816 \u34892 \u26102 \u23450 \u20041 \u26102 \u12290 \
+
+\f1 \'d3\'d0\'bc\'b8\'d6\'d6\'d0\'e8\'d2\'aa\'c4\'e3\'b1\'e0\'b3\'cc\'d0\'d4\'b5\'c4\'c8\'a5\'c5\'e4\'d6\'c3\'ca\'fd\'be\'dd\'d4\'b4\'b5\'c4\'c7\'e9\'bf\'f6\'a3\'ac\'b1\'c8\'c8\'e7\'b5\'b1\'ca\'fd\'be\'dd\'bf\'e2\'c1\'ac\'bd\'d3\'ca\'c7\'b6\'af\'cc\'ac\'b5\'c4\'bb\'f2\'d5\'df\'d0\'e8\'d2\'aa\'d4\'da\'d4\'cb\'d0\'d0\'ca\'b1\'b6\'a8\'d2\'e5\'ca\'b1\'a1\'a3
+\f0 \
 \
 \
 DataSource: It is an interface that can provided by JDBC(Java Database Connectivity) API for establishing the connection with the database. It provides the methods for getting connections to the database and releasing them.\
 \
-DataSource:  \uc0\u36825 \u26159 \u19968 \u20010 \u30001 JDBC API \u25552 \u20379 \u30340 \u29992 \u20110 \u24314 \u31435 \u25968 \u25454 \u24211 \u36830 \u25509 \u30340 \u25509 \u21475 \u65292 \u23427 \u25552 \u20379 \u20102 \u33719 \u21462 \u21644 \u37322 \u25918 \u25968 \u25454 \u24211 \u36830 \u25509 \u30340 \u26041 \u27861 \u12290 \
+DataSource:  
+\f1 \'d5\'e2\'ca\'c7\'d2\'bb\'b8\'f6\'d3\'c9
+\f0 JDBC API 
+\f1 \'cc\'e1\'b9\'a9\'b5\'c4\'d3\'c3\'d3\'da\'bd\'a8\'c1\'a2\'ca\'fd\'be\'dd\'bf\'e2\'c1\'ac\'bd\'d3\'b5\'c4\'bd\'d3\'bf\'da\'a3\'ac\'cb\'fc\'cc\'e1\'b9\'a9\'c1\'cb\'bb\'f1\'c8\'a1\'ba\'cd\'ca\'cd\'b7\'c5\'ca\'fd\'be\'dd\'bf\'e2\'c1\'ac\'bd\'d3\'b5\'c4\'b7\'bd\'b7\'a8\'a1\'a3
+\f0 \
 \
 \
 DriverClassName: It is the property used to specify JDBC driver class name for DataSource, It is necessary to load appropriate JDBC driver class for the database being used.\
 \
-DriverClassName \uc0\u26159 \u29992 \u26469 \u20026 DataSource\u25351 \u23450 JDBC\u39537 \u21160 \u31867 \u21517 \u31216 \u30340 \u23646 \u24615 \u65292 \u23427 \u26377 \u24517 \u35201 \u20026 \u27491 \u22312 \u20351 \u29992 \u20013 \u30340 \u25968 \u25454 \u24211 \u21152 \u36733 \u21512 \u36866 \u30340 JDBC\u39537 \u21160 \u31867 \u12290 \
+DriverClassName 
+\f1 \'ca\'c7\'d3\'c3\'c0\'b4\'ce\'aa
+\f0 DataSource
+\f1 \'d6\'b8\'b6\'a8
+\f0 JDBC
+\f1 \'c7\'fd\'b6\'af\'c0\'e0\'c3\'fb\'b3\'c6\'b5\'c4\'ca\'f4\'d0\'d4\'a3\'ac\'cb\'fc\'d3\'d0\'b1\'d8\'d2\'aa\'ce\'aa\'d5\'fd\'d4\'da\'ca\'b9\'d3\'c3\'d6\'d0\'b5\'c4\'ca\'fd\'be\'dd\'bf\'e2\'bc\'d3\'d4\'d8\'ba\'cf\'ca\'ca\'b5\'c4
+\f0 JDBC
+\f1 \'c7\'fd\'b6\'af\'c0\'e0\'a1\'a3
+\f0 \
 \
 \
 URL:  It can defined as a Uniform Resource Locator, It is a string that can specify the location of the resource. In the context of configuring the DataSource, the URL typically represents the JDBC connection URL which includes details such as the database server address, port, and the database name.\
 \
-URL: \uc0\u20182 \u33021 \u23450 \u20041 \u32479 \u19968 \u36164 \u28304 \u26631 \u35782 \u31526 \u65292 \u36825 \u26159 \u19968 \u20010 \u21487 \u20197 \u25351 \u23450 \u36164 \u28304 \u20301 \u32622 \u30340 \u23383 \u31526 \u20018 \u12290 \u22312 \u25968 \u25454 \u36164 \u28304 \u37197 \u32622 \u30340 \u19978 \u19979 \u25991 \u20013 \u65292 URL\u36890 \u24120 \u20195 \u34920 JDBC\u36830 \u25509 \u30340 URL\u65292 \u21253 \u21547 \u20102 \u22914 \u25968 \u25454 \u24211 \u26381 \u21153 \u22320 \u22336 \u65292 \u31471 \u21475 \u21495 \u65292 \u25968 \u25454 \u24211 \u21517 \u31216 \u31561 \u35814 \u32454 \u20449 \u24687 \u12290 \
+URL: 
+\f1 \'cb\'fb\'c4\'dc\'b6\'a8\'d2\'e5\'cd\'b3\'d2\'bb\'d7\'ca\'d4\'b4\'b1\'ea\'ca\'b6\'b7\'fb\'a3\'ac\'d5\'e2\'ca\'c7\'d2\'bb\'b8\'f6\'bf\'c9\'d2\'d4\'d6\'b8\'b6\'a8\'d7\'ca\'d4\'b4\'ce\'bb\'d6\'c3\'b5\'c4\'d7\'d6\'b7\'fb\'b4\'ae\'a1\'a3\'d4\'da\'ca\'fd\'be\'dd\'d7\'ca\'d4\'b4\'c5\'e4\'d6\'c3\'b5\'c4\'c9\'cf\'cf\'c2\'ce\'c4\'d6\'d0\'a3\'ac
+\f0 URL
+\f1 \'cd\'a8\'b3\'a3\'b4\'fa\'b1\'ed
+\f0 JDBC
+\f1 \'c1\'ac\'bd\'d3\'b5\'c4
+\f0 URL
+\f1 \'a3\'ac\'b0\'fc\'ba\'ac\'c1\'cb\'c8\'e7\'ca\'fd\'be\'dd\'bf\'e2\'b7\'fe\'ce\'f1\'b5\'d8\'d6\'b7\'a3\'ac\'b6\'cb\'bf\'da\'ba\'c5\'a3\'ac\'ca\'fd\'be\'dd\'bf\'e2\'c3\'fb\'b3\'c6\'b5\'c8\'cf\'ea\'cf\'b8\'d0\'c5\'cf\'a2\'a1\'a3
+\f0 \
 \
 \
 Username and Password: These are the credentials required to  authenticate and it can establish the connection  with the database server. The username and password are used to the access database specified in the connection URL.\
 \
-Username \uc0\u21644  Password\u65292 \u36825 \u20123 \u26159 \u36523 \u20221 \u39564 \u35777 \u25152 \u38656 \u30340 \u20973 \u35777 \u65292 \u21487 \u20197 \u24314 \u31435 \u19982 \u25968 \u25454 \u24211 \u26381 \u21153 \u30340 \u36830 \u25509 \u12290  \u29992 \u25143 \u21517 \u21644 \u23494 \u30721 \u29992 \u26469 \u35775 \u38382 \u36830 \u25509 URL\u20013 \u25351 \u23450 \u30340 \u25968 \u25454 \u24211 \u12290 \
+Username 
+\f1 \'ba\'cd
+\f0  Password
+\f1 \'a3\'ac\'d5\'e2\'d0\'a9\'ca\'c7\'c9\'ed\'b7\'dd\'d1\'e9\'d6\'a4\'cb\'f9\'d0\'e8\'b5\'c4\'c6\'be\'d6\'a4\'a3\'ac\'bf\'c9\'d2\'d4\'bd\'a8\'c1\'a2\'d3\'eb\'ca\'fd\'be\'dd\'bf\'e2\'b7\'fe\'ce\'f1\'b5\'c4\'c1\'ac\'bd\'d3\'a1\'a3
+\f0  
+\f1 \'d3\'c3\'bb\'a7\'c3\'fb\'ba\'cd\'c3\'dc\'c2\'eb\'d3\'c3\'c0\'b4\'b7\'c3\'ce\'ca\'c1\'ac\'bd\'d3
+\f0 URL
+\f1 \'d6\'d0\'d6\'b8\'b6\'a8\'b5\'c4\'ca\'fd\'be\'dd\'bf\'e2\'a1\'a3
+\f0 \
 \
 \
 Configuring the DataSource programmatically involves creating and configuring the DataSource bean in the Spring Boot application context manually rather than relying on the external configuration files. It can allow more flexibility and control over the DataSource configuration.\
 \
-\uc0\u20197 \u32534 \u31243 \u30340 \u26041 \u24335 \u37197 \u32622 DataSource\u28041 \u21450 \u21040 \u22312 SpringBoot\u24212 \u29992 \u31243 \u24207 \u19978 \u19979 \u25991 \u20013 \u25163 \u21160 \u30340 \u21019 \u24314 \u21644 \u37197 \u32622 DataSource bean\u65292 \u32780 \u19981 \u26159 \u20381 \u36182 \u20110 \u22806 \u37096 \u37197 \u32622 \u25991 \u20214 , \u23427 \u20801 \u35768 \u23545 \u25968 \u25454 \u28304 \u37197 \u32622 \u26377 \u26356 \u28789 \u27963 \u30340 \u25511 \u21046 \u12290 \
+
+\f1 \'d2\'d4\'b1\'e0\'b3\'cc\'b5\'c4\'b7\'bd\'ca\'bd\'c5\'e4\'d6\'c3
+\f0 DataSource
+\f1 \'c9\'e6\'bc\'b0\'b5\'bd\'d4\'da
+\f0 SpringBoot
+\f1 \'d3\'a6\'d3\'c3\'b3\'cc\'d0\'f2\'c9\'cf\'cf\'c2\'ce\'c4\'d6\'d0\'ca\'d6\'b6\'af\'b5\'c4\'b4\'b4\'bd\'a8\'ba\'cd\'c5\'e4\'d6\'c3
+\f0 DataSource bean
+\f1 \'a3\'ac\'b6\'f8\'b2\'bb\'ca\'c7\'d2\'c0\'c0\'b5\'d3\'da\'cd\'e2\'b2\'bf\'c5\'e4\'d6\'c3\'ce\'c4\'bc\'fe
+\f0 , 
+\f1 \'cb\'fc\'d4\'ca\'d0\'ed\'b6\'d4\'ca\'fd\'be\'dd\'d4\'b4\'c5\'e4\'d6\'c3\'d3\'d0\'b8\'fc\'c1\'e9\'bb\'ee\'b5\'c4\'bf\'d8\'d6\'c6\'a1\'a3
+\f0 \
 \
 \
 Inside the class, we can define the method annotated with @Bean which can returns the DataSource object of the application.\
 \
-\uc0\u22312 \u36825 \u20010 \u31867 \u20013 \u65292 \u25105 \u20204 \u21487 \u20197 \u23450 \u20041 \u24102 \u26377 @Bean\u27880 \u35299 \u30340 \u26041 \u27861 \u65292 \u35813 \u26041 \u27861 \u21487 \u20197 \u36820 \u22238 \u24212 \u29992 \u31243 \u24207 \u30340 DataSource\u23545 \u35937 \u12290 \
+
+\f1 \'d4\'da\'d5\'e2\'b8\'f6\'c0\'e0\'d6\'d0\'a3\'ac\'ce\'d2\'c3\'c7\'bf\'c9\'d2\'d4\'b6\'a8\'d2\'e5\'b4\'f8\'d3\'d0
+\f0 @Bean
+\f1 \'d7\'a2\'bd\'e2\'b5\'c4\'b7\'bd\'b7\'a8\'a3\'ac\'b8\'c3\'b7\'bd\'b7\'a8\'bf\'c9\'d2\'d4\'b7\'b5\'bb\'d8\'d3\'a6\'d3\'c3\'b3\'cc\'d0\'f2\'b5\'c4
+\f0 DataSource
+\f1 \'b6\'d4\'cf\'f3\'a1\'a3
+\f0 \
 \
 \
-Nicksui1992.\
+\
 \
 \
 \
