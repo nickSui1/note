@@ -135,8 +135,134 @@ IoC容器初始化和销毁Bean的过程，就是Bean的生命周期的过程，
 ### DataSource配置方式的选择
 
 - 可以在application.properties或者application.yml中配置DataSource，如果未配置，spring boot会寻找默认的内置数据库驱动去应用。
-
 - 在需要动态的配置DataSource时，或者在运行时需要决定使用哪种数据库资源的时候，可以以编程方式配置DataSource：Configure DataSource Programmatically  in Spring Boot.
 
-  
+
+
+### 集成Mybatis
+
+在spring-boot中使用mybatis，有两种常用方式
+
+- 原生mybatis [原生mybatis](https://mybatis.org/mybatis-3/getting-started.html)
+- mybatis-spring-boot-stater [mybatis-spring](https://mybatis.org/spring-boot-starter/mybatis-spring-boot-autoconfigure/)
+
+
+
+#### 原生mybatis
+
+##### 通过xml全局配置文件
+
+可以通过配置mybatis-config.xml，对datasource，transactionManage，mapper，setting，properties等节点进行配置，详细可参考 
+
+[mybatis-3/configuration](https://mybatis.org/mybatis-3/configuration.html) . 
+
+当使用xml全局配置时，需要我们手动去构建SqlSessionFactory，SqlSessionFactory可以用来获取SqlSession对象，然后可以使用sqlSession来执行数据库的sql命令了。
+
+
+
+#### mybatis-spring-boot-starter 
+
+MyBatis-Spring-Boot-Starter是**MyBatis与Spring Boot**集成的启动器，它简化了在Spring Boot应用程序中集成MyBatis的过程，
+
+As you may already know, to use MyBatis with Spring you need at least an `SqlSessionFactory` and at least one mapper interface.
+
+MyBatis-Spring-Boot-Starter will:
+
+- Autodetect an existing `DataSource`
+- Will create and register an instance of a `SqlSessionFactory` passing that `DataSource` as an input using the `SqlSessionFactoryBean`
+- Will create and register an instance of a `SqlSessionTemplate` got out of the `SqlSessionFactory`
+- Auto-scan your mappers, link them to the `SqlSessionTemplate` and register them to Spring context so they can be injected into your beans
+
+In short, mybatis-spring-boot-starter will **automatically** find your dataSource configuration in the properties and generate **sqlSessionFactory** required for execute sql command. With mybatis-spring, you do not need to manually manage commits and rollbacks, spring will help you to manage them, you just have to focus on Coding.
+
+Notice: If spring can not find any dataSource configuration in properties or yml,  then spring will not generate any classes (e.g. SqlSessionFactory). 
+
+Mybatis-spring relies entirely on the application.properties(yml) file, whitch means that you do not need configure the **datasource** in mybatis-config.xml file, but it doesn't mean you should't create the mybatis-config.xml file, you still need this file to configure the other node(e.g.  properties, settings, typeAliases, mappers etc.)
+
+
+
+## Exception
+
+### ExceptionHandler
+
+You can add extra (`@ExceptionHandler`) methods to any controller to specifically handle exceptions thrown by request handling (`@RequestMapping`) methods in the same controller. Such methods can:
+
+1. Handle exceptions without the `@ResponseStatus` annotation (typically predefined exceptions that you didn't write)
+2. Redirect the user to a dedicated error view
+3. Build a totally custom error response
+
+
+
+### ControllerAdvice
+
+A controller advice allows you to use exactly the same exception handling techniques but apply them across the whole application, not just to an individual controller. You can think of them as an annotation driven interceptor.
+
+Any class annotated with `@ControllerAdvice` becomes a controller-advice and three types of method are supported:
+
+- Exception handling methods annotated with `@ExceptionHandler`.
+- Model enhancement methods (for adding additional data to the model) annotated with
+
+`@ModelAttribute`. Note that these attributes are *not* available to the exception handling views.
+
+- Binder initialization methods (used for configuring form-handling) annotated with
+
+`@InitBinder`.
+
+We are only going to look at exception handling - search the [online manual](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-controller) for more on `@ControllerAdvice` methods.
+
+
+
+### Handle Exceptions Globally
+
+To handle exceptions globally, you can use the **@ControllerAdvice** annotation class and **@ExceptionHandler** annotation methods.
+
+```java
+@ControllerAdvice
+public class GlobalExceptionHandlingControllerAdvice {
+
+    protected Logger logger;
+
+    public GlobalExceptionHandlingControllerAdvice() {
+        logger = LoggerFactory.getLogger(getClass());
+    }
+
+    /**
+     * Convert a predefined exception to an HTTP Status code
+     */
+    @ResponseStatus(value = HttpStatus.CONFLICT, reason = "Data integrity violation")
+    // 409
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public void conflict() {
+        logger.error("Request raised a DataIntegrityViolationException");
+        // Nothing to do
+    }
+}
+```
+
+Note that the @ExceptionHandler(DataIntegrityViolationException.class) above, if any controller throws this exception **DataIntegrityViolationException**, this exception will be handled by the conflict() method.
+
+About the custom exception such as **DataIntegrityViolationException** above, we can define custom exception classes by extends RuntimeException or DataAccessException etc. classes as you need, the simple example is as follows:
+
+```java
+public class DataIntegrityViolationException extends DataAccessException {
+
+	/**
+	 * Unique ID for Serialized object
+	 */
+	private static final long serialVersionUID = -8146834359701827537L;
+
+	public DataIntegrityViolationException(String msg) {
+		super(msg);
+	}
+
+	public DataIntegrityViolationException(String msg, Throwable t) {
+		super(msg, t);
+	}
+
+}
+```
+
+For more details of mvc-exceptions, please check the official document: [Exception Handling in Spring MVC](https://spring.io/blog/2013/11/01/exception-handling-in-spring-mvc#using-exceptionhandler)
+
+
 
