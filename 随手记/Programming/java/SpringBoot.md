@@ -129,6 +129,10 @@ Dependency injection 简称DI，依赖注入是一种设计模式，用于实现
 - 带参数的构造方法依赖注入
   - 在构造方法的参数内，使用@Autowired，如果需要，可以加上@Qualifier
 
+###### 关于依赖注入需要注意的点
+
+- 1, 一切使用new创建的对象, Spring依赖注入机制都无法捕获, 哪怕此对象加了类似于@Service的注解. 因为new 的对象会绕过Spring Container. 所以,new的对象无法使用依赖注入
+
 #### 面向切面编程（Aspect Oriented Programming，AOP）
 
 
@@ -714,6 +718,8 @@ This is called by **AuthenticationProvider** to load the user details, it can ca
 
 ### SecurityContext
 
+This is the Authentication object.
+
 SecurityContext is a sort of context that is available throghtout the duration of the request, so the context wherein the informantion about authentication is stored.
 
 SecurityContext stores the roles, so the application can dictate who can and cannot allowed to do.
@@ -728,121 +734,210 @@ An user enter the username and the password to the request, it gose through a se
 
 
 
-## Spring Security+JWT
+### Spring Security Control The Role&Permission Example
 
-假设我们有一个小Demo项目，我们有一个Controller，创建了一个方法
+To control the **permissions** of roles in a **Spring Boot** application using **Spring Security**, you can define permissions at different levels such as at the URL level, method level, or within the application logic. Here’s a step-by-step approach:
+
+#### 1. **Define Roles and Permissions in the Database**
+
+You typically start by defining user roles (such as `ROLE_ADMIN`, `ROLE_USER`) and specific permissions. A common approach is to have a `User` entity linked to a `Role` entity and possibly a `Permission` entity.
+
+##### Sample Database Schema:
 
 ```java
-@RestController @RequestMapping("hello")
-public class HelloRestController {
+@Entity
+public class Role {
+    @Id
+    private Long id;
+    private String name; // ROLE_ADMIN, ROLE_USER
 
-    @GetMapping("user")
-    public String helloUser() {
-        return "Hello User";
-    }
-
-    @GetMapping("admin")
-    public String helloAdmin() {
-        return "Hello Admin";
-    }
-
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "roles_permissions",
+        joinColumns = @JoinColumn(name = "role_id"),
+        inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    private Set<Permission> permissions;
 }
 ```
 
-我们可以通过浏览器或者PostMan等工具去访问此接口/hello/user，会返回结果"Hello User"，任何人都可以随意访问。
-
-
-
-### Spring Security 引用
-
-这时如果我们添加Spring Security安全组件到Pom
-
-Spring Security dependency
-
-```xml
-<dependencies>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
-</dependencies>
+```java
+@Entity
+public class Permission {
+    @Id
+    private Long id;
+    private String name; // e.g., "READ_PRIVILEGE", "WRITE_PRIVILEGE"
+}
 ```
 
+```java
+@Entity
+public class User {
+    @Id
+    private Long id;
+    private String username;
+    private String password;
 
-
-### Authentication 机制
-
-#### login
-
-通常情况下，我们在添加dependencies时候，不会立刻生效，我们需要对添加的dependency进行相应的配置，dependency才会生效，**但是Spring Security引用比较特殊，它开箱即用，只要添加了引用，重新运行项目，无需配置，即对所有URL进行Spring Security的默认验证。**
-
-添加完成后，当我们再次访问/hello/user，会被重定向到/login。这是一种默认机制，Spring Security框架对所有Url进行开箱即用的身份验证，添加Spring Security后，默认情况下，所有请求都会经过身份验证，如果未通过，则会被重定向到/login 页面进行登陆，登录成功后会重定向到我们当前请求的URL。
-
-To pass the authentication, we can use the default username `user` and find an auto-generated password in our console:
-
-```shell
-Using generated security password: 1fc15145-dfee-4bec-a009-e32ca21c77ce
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Role> roles;
+}
 ```
 
-我们可以在控制台中搜索到Spring Security为我们生成的默认密码，如上所示。默认用户名就是user。使用默认用户名user和密码就可以通过身份验证了（即登陆）
+#### 2. **Implement UserDetailsService to Load User Data**
 
-Please remember that the password changes each time we rerun the application. If we want to change this behavior and make the password static, we can add the following configuration to our `application.properties` file:
+You'll need to implement `UserDetailsService` to load users and their roles, which will be used by Spring Security for authentication and authorization.
 
-```properties
-spring.security.user.password=Test12345_
+```java
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found");
+        }
+        return new org.springframework.security.core.userdetails.User(
+            user.getUsername(),
+            user.getPassword(),
+            getAuthorities(user)
+        );
+    }
+
+    private Collection<? extends GrantedAuthority> getAuthorities(User user) {
+        Set<GrantedAuthority> authorities = new HashSet<>();
+        for (Role role : user.getRoles()) {
+            authorities.add(new SimpleGrantedAuthority(role.getName()));
+            role.getPermissions().forEach(permission -> {
+                authorities.add(new SimpleGrantedAuthority(permission.getName()));
+            });
+        }
+        return authorities;
+    }
+}
 ```
 
-但是，请求到服务器后，Spring Security会尝试使用RequestHeaderRequestMatcher去匹配合适的controller方法，在任何Spring Security特性未配置的情况下，会No match found.
+#### 3. **Configure Spring Security**
 
-#### logout
+In the `SecurityConfig` class, configure access to different URLs or methods based on roles or permissions.
 
-Please note that the out-of-the-box authentication process is session-based, and if we want to log out, we can access the following URL: `http://localhost:8080/logout`
+```java
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
 
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+    }
 
-以上在经典MVC web应用程序中，可开箱即用，因为经典MVC web是基于会话的身份验证。
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests()
+            .antMatchers("/admin/**").hasRole("ADMIN") // restricts admin URLs to users with "ADMIN" role
+            .antMatchers("/user/**").hasAnyRole("USER", "ADMIN")
+            .antMatchers("/public/**").permitAll() // public access without any role
+            .anyRequest().authenticated()
+            .and()
+            .formLogin().permitAll()
+            .and()
+            .logout().permitAll();
+    }
 
-**但是在大多数用例中，是前后端分离的，基于jwt的无状态身份验证，在这种情况下，不得不进行大量的对Spring Security进行定制。**
-
-
-
-![AuthenticationArchitecture](/Users/nicksy/note/programNote/Image/AuthenticationArchitecture.png)
-
-### Spring Security Filters Chain
-
-一旦我们添加了Spring Security引用，Spring Security框架会自动为我们的应用程序注册一个拦截所有请求的Filters chain，这个chain由各种filter组成，每个filter负责特定的用例。
-
-例如：
-
-- Check if the requested URL is publicly accessible, based on configuration.
-- In case of session-based authentication, check if the user is already authenticated in the current session.
-- Check if the user is authorized to perform the requested action, and so on.
-
-Note：Spring Security Filter以最低顺序注册，并且第一个调用，如果想在此之前插入其他的过滤器，可配置Spring Security Filter的order为任意数字，比如10，那么低于10的数字会在Spring Security Filter前调用。
-
-```properties
-spring.security.filter.order=10
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
 ```
 
+#### 4. **Method-Level Security with `@PreAuthorize` and `@Secured`**
 
+You can control permissions at the method level by using annotations like `@PreAuthorize` or `@Secured`. These allow more granular permission control.
 
-### AuthenticationManager
+- **`@PreAuthorize`** checks permissions before executing the method:
+```java
+@Service
+public class ProductService {
 
-You can think of `AuthenticationManager` as a coordinator where you can register multiple providers, and based on the request type, it will deliver an authentication request to the correct provider.
+    @PreAuthorize("hasRole('ADMIN')")
+    public void addProduct() {
+        // only admins can add products
+    }
+    
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public List<Product> getAllProducts() {
+        // both users and admins can view products
+    }
+}
+```
 
-### AuthenticationProvider
+- **`@Secured`** allows for simple role checks:
+```java
+@Secured("ROLE_ADMIN")
+public void deleteProduct(Long productId) {
+    // only admins can delete products
+}
+```
 
-`AuthenticationProvider` processes specific types of authentication. Its interface exposes only two functions:
+To enable method-level security in your configuration, add:
+```java
+@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true)
+public class MethodSecurityConfig extends GlobalMethodSecurityConfiguration {
+}
+```
 
-- `authenticate` performs authentication with the request.
-- `supports` checks if this provider supports the indicated authentication type.
+#### 5. **Role Hierarchy (Optional)**
 
-One important implementation of the interface that we are using in our sample project is `DaoAuthenticationProvider`, which retrieves user details from a `UserDetailsService`.
+If you want certain roles to inherit the permissions of others (e.g., `ADMIN` inherits all permissions from `USER`), you can set up a role hierarchy.
 
-### UserDetailsService
+```java
+@Bean
+RoleHierarchy roleHierarchy() {
+    RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
+    roleHierarchy.setHierarchy("ROLE_ADMIN > ROLE_USER");
+    return roleHierarchy;
+}
+```
 
-`UserDetailsService` is described as a core interface that loads user-specific data in the Spring documentation.
+#### 6. **Custom Permission Evaluation (Advanced)**
 
-In most use cases, authentication providers extract user identity information based on credentials from a database and then perform validation. Because this use case is so common, Spring developers decided to extract it as a separate interface, which exposes the single function:
+For more fine-grained permission control, you can implement a custom permission evaluator using the `@PreAuthorize` annotation with a SpEL (Spring Expression Language) expression.
 
-- `loadUserByUsername` accepts username as a parameter and returns the user identity object.
+```java
+@PreAuthorize("hasPermission(#id, 'Product', 'READ_PRIVILEGE')")
+public Product getProductById(Long id) {
+    // Logic to fetch product
+}
+```
+
+To implement custom permission evaluation, you’ll need a `PermissionEvaluator` and configure it in your security setup.
+
+#### Summary
+
+- Define roles and permissions in your database or hardcode them.
+- Use `UserDetailsService` to load roles and permissions for authentication.
+- Configure role-based access to URLs in `SecurityConfig`.
+- Use method-level security with `@PreAuthorize` or `@Secured`.
+- Optionally, implement role hierarchy or custom permission evaluation for more complex scenarios.
+
+By combining these approaches, you can control user permissions in a highly flexible way using Spring Security.
+
+#### Scenarios to which you can apply
+
+- user login: This is user-level authentication, users send their username and password to the server, which returns the token for subsequent requests.
+- server to server: This is server-level authentication where other servers send their client_id and client_secret to get their access_token, the token contains claims (e.g., client_id, scopes, expiry time) , you can verify that the token has been tampered with, you do not need to extract the client_secret from token, because the other server has been authenticate when they send their client_id and client_secret to get access_token, they have proven who they are, the access_token is the proof.
+- Third party login: The users provide their credentials(e.g., username, password ) to own server, we use their credentials to request their original platform for obtain their permission,  we only need original platform return the verification result and roles then we can generate token for third party users, why do not need their original platform generate token? because even   we get the token, we also need to verify the token, there are implicate many other factor. so we only need to know that their credentials are permitted and we generate token and authentication for them.
+
+Note: SecurityContextHolder is just a container, whether your authentication is stateful or stateless, SecurityContextHolder is only responsible for storing  authentication info as a container.
+
+- Stateful: The HttpSession usually used for authentication stateful.
+- Stateless: Server does not stores any states interact with client, the client sends requests to server with authentication header each time, and then the server will authenticate the token and stores an authentication information into the SecurityContextHolder if the token is successfully authenticated, the information only existing one request duration in the SecurityContextHolder.
+- About logout: If we use the stateless authentication, we need the client to send the access_token and refresh_token of users to logout API so that we can invalidate both of them.
+- Client Table: The client table data only use for other servers to request our API, we provide a table to store the client_id and client_secret so that they can use these two column to request a token for their authentication such as normal users login that use the username and password.

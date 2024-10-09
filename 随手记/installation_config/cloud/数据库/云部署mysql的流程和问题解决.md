@@ -258,3 +258,80 @@
 - 禁用远程登录root用户，`DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');`, quit 切换到admin用户登录，对root用户进行密码修改，`alter user 'root'@'localhost' identified with mysql_native_password by 'pwd';` 如果修改失败，可以先置空密码`update user set authentication_string ='' where user ='root';` 成功后quit
 
 - 这时候将my.cnf的skip-grant-tables禁用，重启mysql服务，这时候登录root用户，发现可以登陆了。
+
+
+
+## 无密码登录root方式
+
+此方式一般是忘记密码或者密码无法登陆情况下使用, 操作成功后可正常登录root用户进行操作.
+
+
+
+Since you cannot log in as `root` without the `--skip-grant-tables` flag, but your goal is to change the root password and fix access, you can follow a specific process to reset the root password, even with `--skip-grant-tables` enabled.
+
+Here’s how you can proceed to resolve the issue:
+
+### Steps to Reset Root Password:
+
+1. **Start MySQL with `--skip-grant-tables`:**
+   This is necessary because you need to bypass the authentication check.
+
+   ```bash
+   sudo systemctl set-environment MYSQLD_OPTS="--skip-grant-tables"
+   sudo systemctl start mysqld
+   ```
+
+2. **Log in to MySQL as `root`:**
+   Since the grant tables are disabled, you should be able to log in without a password.
+
+   ```bash
+   mysql -u root
+   ```
+
+3. **Reset the Root Password:**
+   Since `--skip-grant-tables` is set, you can't alter users with standard privilege commands like `ALTER USER`. However, **you can directly update the `mysql.user` table** to reset the password.
+
+   First, run the following SQL command to update the `authentication_string` field for the `root` user:
+
+   ```sql
+   UPDATE mysql.user SET authentication_string = '' WHERE User = 'root' AND Host = 'localhost';
+   ```
+
+4. **Enable the MySQL Grant Tables:**
+   Now that the password is cleared, you need to restart MySQL **without** the `--skip-grant-tables` flag so that the grant tables are re-enabled and changes can take effect.
+
+   ```bash
+   sudo systemctl unset-environment MYSQLD_OPTS
+   sudo systemctl restart mysqld
+   ```
+
+5. **Log In Without a Password:**
+   You should now be able to log in as `root` without a password, since the password field has been reset.
+
+   ```bash
+   mysql -u root
+   ```
+
+6. **Set a New Root Password:**
+   Now that you’ve logged in without a password, **set a new password** for the root user:
+
+   ```sql
+   ALTER USER 'root'@'localhost' IDENTIFIED BY 'YourNewPassword';
+   ```
+
+7. **Flush Privileges:**
+   After setting the new password, don’t forget to flush the privileges so that MySQL refreshes its internal user authentication:
+
+   ```sql
+   FLUSH PRIVILEGES;
+   ```
+
+### Summary:
+
+By following these steps, you’re able to:
+1. Log in with `--skip-grant-tables`.
+2. Clear the `root` password.
+3. Restart MySQL to re-enable the grant tables.
+4. Log in without a password and set a new password for the `root` user.
+
+This should fix your issue and let you regain full access to the `root` account without needing `--skip-grant-tables` anymore.
