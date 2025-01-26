@@ -119,23 +119,155 @@ spring允许我们使用扫描Bean装配到IoC容器中
 
 Dependency injection 简称DI，依赖注入是一种设计模式，用于实现类之间的解耦和依赖关系的管理。它通过将依赖关系的创建和维护责任转移到外部容器中，使得类不需要自己实例化依赖对象，而是由外部容器动态地注入依赖。传统的对象创建方式往往由类自身负责创建和管理依赖对象，这样导致了类之间的紧密耦合。
 
+**Spring will only inject dependencies into beans.** Spring只会对bean进行依赖注入, 也就是说, 某个类需要依赖注入引用其他类, 这些类都必须是bean才可以.
+
+**Filter 需要特别作处理, filters即使加了@Component, 也需要显示的在SecurityConfiguration中进行注册bean, 以及添加到filter chain中. Spring不会自动添加加了注解的filter.**
+
 - @Autowired 最常用的注解，机制最基本的是根据类型（by type）或者根据名称（by name）。
+
 - @Autowired是一个默认必须找到对应Bean的注解，如果不能确定其标注属性一定会存在并且允许这个被标注的属性为null，那么可以配置@Autowired属性的required为false
   - Autowired可以通过类型找到对应的Bean进行注入
   - Autowired可以通过名称找到对应的Bean进行注入，举例：如果接口有多个实现类，直接默认注入，在调用的时候会报错，这时候可以选择by name（用想要注入的Bean的名称作为属性名）注入。
+  
 - @Primary和@，这两个注解可以用来消除歧义性
   - @Primary 注解可以加在Bean上，意味着此类会被优先注入（例如在一个接口有多个实现类的时候，会优先注入标记此注解的Bean）
   - @Qualifier实现可以通过by name的形式找到想要注入的Bean，一般配合@Autowired一起使用，可实现同时通过类型和名称获取Bean（例如在一个接口有多个实现类的时候，如果有多个标明@Primary注解的，这时候可以在属性上加上@Qualifier，注解内参数为对应Bean的名称。
-- 带参数的构造方法依赖注入
-  - 在构造方法的参数内，使用@Autowired，如果需要，可以加上@Qualifier
+  
+- **带参数的构造方法依赖注入(推荐的方式)**
+  
+  - 创建需要依赖注入的属性(Injected property)
+  
+  - 在构造函数方法上加@Autowired, 将需要依赖添加到构造函数方法参数内, 并将其指派给Injected property
+  
+  - 如果要保持依赖注入的不可变性, 可以在属性声明时候加上final关键字, 这样可以保证在类的生命周期内不会被更改. 
+  
+  - 依赖注入的生命周期和它的引用类的生命周期是绑定的
+  
+    ```java
+    @Configuration
+    public class config{
+      @Bean
+      @Scope("singleton")
+      public CustomBean getCustomBean(){
+        return new CustomBean();
+      }
+    }
+    
+    public class ClassA{
+    	private final CustomBean customBean; //customBean 作为依赖注入的引用，它的引用生命周期由 ClassA 的生命周期决定。
+      
+      @Autowired
+      public ClassA(CustomBean customBean){//CustomBean 本身的生命周期取决于它在 Spring 容器中的声明方式。如果是 singleton，它会在整个应用程序生命周期内存活；如果是 prototype，它的生命周期仅限于注入的那个对象的生命周期（如 ClassA）。
+        this.customBean = customBean;
+      }
+    }
+    ```
+
+
+
+详细列举不同的作用域（`Scope`）如何影响依赖注入引用的生命周期，以及 `Bean` 本身的生命周期。还是用刚才提供的例子来解释。
+
+**1. Singleton（默认作用域）**
+
+```java
+@Bean
+@Scope("singleton")
+public CustomBean customBean() {
+    return new CustomBean();
+}
+```
+
+- **依赖注入的引用（`customBean` in `ClassA`）**:
+  - `customBean` 作为 `ClassA` 中的依赖注入引用，它的引用生命周期由 `ClassA` 的生命周期决定。当 `ClassA` 被销毁或垃圾回收时，`customBean` 的引用也不再存在。
+  
+- **`CustomBean` 本身的生命周期**:
+  - `CustomBean` 是 `singleton` 作用域的 Bean，Spring 容器在启动时会创建该 Bean 的一个实例，并在整个应用程序的生命周期中共享使用。不论有多少个类（如 `ClassA`）注入这个 Bean，它们都会共享这个 `CustomBean` 实例。只有当应用程序关闭或 Spring 容器关闭时，`CustomBean` 才会被销毁。
+
+**2. Prototype**
+
+```java
+@Bean
+@Scope("prototype")
+public CustomBean customBean() {
+    return new CustomBean();
+}
+```
+
+- **依赖注入的引用（`customBean` in `ClassA`）**:
+  - `customBean` 的引用生命周期仍然由 `ClassA` 的生命周期决定。当 `ClassA` 被销毁时，这个 `customBean` 引用就会随之消失。
+  
+- **`CustomBean` 本身的生命周期**:
+  - `CustomBean` 是 `prototype` 作用域的 Bean。每次注入时（即每次 `ClassA` 创建时），Spring 容器都会为 `ClassA` 创建一个新的 `CustomBean` 实例。当 `ClassA` 被销毁时，`CustomBean` 实例不会被 Spring 容器自动管理销毁，而是依赖于 Java 的垃圾回收机制。`Prototype` Bean 的生命周期与使用它的对象（如 `ClassA`）的生命周期一致。
+
+**3. Request Scope（仅适用于 Web 应用）**
+
+```java
+@Bean
+@Scope("request")
+public CustomBean customBean() {
+    return new CustomBean();
+}
+```
+
+- **依赖注入的引用（`customBean` in `ClassA`）**:
+  - `customBean` 的引用生命周期由 `ClassA` 决定，但这仅在 HTTP 请求范围内有效。一旦请求结束，`ClassA` 和它的依赖（`customBean`）都将被销毁。
+
+- **`CustomBean` 本身的生命周期**:
+  - `CustomBean` 是 `request` 作用域的 Bean。每个 HTTP 请求都会生成一个新的 `CustomBean` 实例，这个实例在请求处理结束时被销毁。因此，它的生命周期与 HTTP 请求的生命周期一致，随请求结束而销毁。
+
+**4. Session Scope（仅适用于 Web 应用）**
+
+```java
+@Bean
+@Scope("session")
+public CustomBean customBean() {
+    return new CustomBean();
+}
+```
+
+- **依赖注入的引用（`customBean` in `ClassA`）**:
+  - `customBean` 的引用生命周期由 `ClassA` 和 HTTP 会话决定。当 `ClassA` 依赖注入时，会获取当前 HTTP 会话的 `CustomBean` 实例。引用在会话结束时销毁。
+
+- **`CustomBean` 本身的生命周期**:
+  - `CustomBean` 是 `session` 作用域的 Bean。每个用户会话会生成一个 `CustomBean` 实例，并在整个会话期间共享使用。会话结束时，`CustomBean` 实例会被销毁。
+
+**5. Application Scope**
+
+```java
+@Bean
+@Scope("application")
+public CustomBean customBean() {
+    return new CustomBean();
+}
+```
+
+- **依赖注入的引用（`customBean` in `ClassA`）**:
+  - `customBean` 的引用生命周期由 `ClassA` 的生命周期决定。当 `ClassA` 被销毁时，引用随之消失。
+  
+- **`CustomBean` 本身的生命周期**:
+  - `CustomBean` 是 `application` 作用域的 Bean。整个 Web 应用程序共享一个实例，Bean 的生命周期与整个应用程序的生命周期一致，直到应用程序关闭或重启。
+
+**总结**
+
+| 作用域          | 依赖注入引用的生命周期                               | Bean 本身的生命周期                                          |
+| --------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| **Singleton**   | 由引用它的类（如 `ClassA`）的生命周期决定            | 应用程序的生命周期，所有类共享同一个实例，直到应用程序关闭。 |
+| **Prototype**   | 由引用它的类（如 `ClassA`）的生命周期决定            | 每次注入创建一个新实例，实例的生命周期仅由引用它的类决定，随 `ClassA` 销毁。 |
+| **Request**     | 由引用它的类的生命周期决定，但在 HTTP 请求结束时销毁 | 每个 HTTP 请求创建一个实例，随请求结束时销毁。               |
+| **Session**     | 由引用它的类的生命周期决定，但在 HTTP 会话结束时销毁 | 每个 HTTP 会话创建一个实例，随会话结束时销毁。               |
+| **Application** | 由引用它的类的生命周期决定                           | 整个应用程序共享一个实例，Bean 的生命周期与应用程序一致。    |
+
+
+
+
 
 ###### 关于依赖注入需要注意的点
 
 - 1, 一切使用new创建的对象, Spring依赖注入机制都无法捕获, 哪怕此对象加了类似于@Service的注解. 因为new 的对象会绕过Spring Container. 所以,new的对象无法使用依赖注入
 
+
+
 #### 面向切面编程（Aspect Oriented Programming，AOP）
-
-
 
 #### 生命周期
 
@@ -144,6 +276,135 @@ IoC容器初始化和销毁Bean的过程，就是Bean的生命周期的过程，
 ##### Bean的定义
 
 - Spring通过我们的配置，如@ComponentScan定义的扫描路径去找带有@Component的类，这个过程就是一个资源定位的过程。
+- Bean 未指定Scope时候, 默认为Singleton, 即单例模式的Bean, Bean的生命周期持续整个application context.
+  - Scope: Bean可以加Scope注解, 例如 @Scope(“singleton”), @Scope("request"), @Scope("session") 等, 不同的作用域, Bean的生命周期也会不同, 也就意味着, 这些Bean会有不同的 创建, 初始化, 生存, 销毁时机.
+
+
+
+The terms **"Bean scope"** and **"Object scope"** can both refer to the lifecycle and visibility of objects, but they apply in different contexts. Let’s break down the differences:
+
+### **Bean Scope (Spring Framework Context)**
+In the Spring framework, **Bean scope** refers to how Spring manages the lifecycle of its Beans. It determines **how long** a Bean instance will live, **how many instances** of the Bean are created, and **who can access them**.
+
+Spring provides several scopes that govern the lifecycle of Beans within the **Spring Application Context**:
+
+#### Common Spring Bean Scopes:
+- **Singleton** (default): A single instance of the Bean is created, and it is shared across the entire application context. This is the default scope if no `@Scope` annotation is provided.
+    - One Bean instance per Spring container.
+    - Example: `@Scope("singleton")`
+  
+- **Prototype**: A new instance of the Bean is created every time it is requested (whether by another Bean or from the application context).
+    - Multiple Bean instances per Spring container.
+    - Example: `@Scope("prototype")`
+  
+- **Request** (Web context): A new instance of the Bean is created for every HTTP request in a web application.
+    - Example: `@Scope("request")`
+  
+- **Session** (Web context): A new instance of the Bean is created for every HTTP session in a web application.
+    - Example: `@Scope("session")`
+
+- **Application** (Web context): A single Bean instance is created for the lifecycle of a web application.
+    - Example: `@Scope("application")`
+  
+- **WebSocket** (Web context): A Bean instance is created and maintained for the lifecycle of a WebSocket session.
+    - Example: `@Scope("websocket")`
+
+**Example in Spring:**
+
+```java
+@Bean
+@Scope("prototype")
+public SomeBean getSomeBean() {
+    return new SomeBean();
+}
+```
+
+**Summary of Bean Scope:**
+
+- **Bean scope** is a Spring concept used to manage object creation and lifecycle within the Spring application context.
+- The scope determines how and when Beans are instantiated and destroyed in the Spring container.
+
+---
+
+### **Object Scope (General Programming Context)**
+In general **object-oriented programming (OOP)**, **object scope** refers to the lifetime and visibility of an object within the program. It defines **when** the object is created, **where** it can be accessed, and **when** it is destroyed.
+
+In languages like Java, Python, and C++, object scope is determined by how the object is defined and where it is used in the code. There are several types of object scopes:
+
+#### Common Object Scopes in OOP:
+- **Local scope**: Objects created within a method or block of code. These objects are only accessible within that block and are destroyed once the method finishes executing.
+    - Example: Local variables or objects in a method.
+  
+- **Instance scope** (Object-level scope): Objects or fields that are tied to an instance of a class. They exist as long as the object instance exists.
+    - Example: Instance variables in a class, where each object of the class has its own copy of the variable.
+  
+- **Class scope** (Static scope): Objects or fields declared with the `static` keyword. These are shared by all instances of the class and exist for the lifetime of the application or class loader.
+    - Example: Static variables in Java or class variables in Python.
+
+#### Example of Object Scopes in Java:
+```java
+public class MyClass {
+    private String instanceField;  // Instance scope (exists for each object)
+
+    private static String staticField;  // Class scope (shared across all objects)
+
+    public void someMethod() {
+        String localVariable = "local";  // Local scope (exists only in this method)
+    }
+}
+```
+
+**Summary of Object Scope:**
+
+- **Object scope** is a general programming concept that defines the accessibility and lifetime of objects based on where they are declared in the code (method, instance, or class).
+- It is language-agnostic and applies to object-oriented programming in general.
+
+#### **Key Differences:**
+
+1. **Context**:
+   - **Bean Scope**: Specific to Spring or similar frameworks that manage object lifecycles in a container.
+   - **Object Scope**: Applies in general programming, determining object lifecycle based on where they are declared and used in code.
+
+2. **Management**:
+   - **Bean Scope**: Spring (or another framework) controls the lifecycle and visibility of Beans (objects) within its container, and the scope can be configured (singleton, prototype, request, etc.).
+   - **Object Scope**: Managed by the language's runtime (e.g., Java JVM, Python interpreter), based on when objects are created and garbage-collected.
+
+3. **Lifespan**:
+   - **Bean Scope**: Controlled by the Spring container and varies based on the scope (e.g., singleton for the whole application, prototype for each request).
+   - **Object Scope**: Depends on where the object is declared (method, class, or static context) and how long references to it exist.
+
+4. **Visibility**:
+   - **Bean Scope**: Visibility is within the Spring application context (global within the context or per request/session).
+   - **Object Scope**: Visibility is based on the object's declaration (local to methods, instance-level, or static class-level).
+
+#### Example of Bean Scope vs Object Scope:
+
+Let’s say you have a Spring-managed service:
+
+```java
+@Service
+@Scope("singleton")  // Bean Scope: Singleton (1 instance for the whole app)
+public class MyService {
+    private int instanceVariable;  // Object Scope: Instance-level variable
+    private static int staticVariable;  // Object Scope: Class-level (shared by all instances)
+    
+    public void someMethod() {
+        int localVariable = 0;  // Object Scope: Local (only in this method)
+    }
+}
+```
+
+In this example:
+- **Bean Scope**: `MyService` is a singleton, meaning Spring will create only one instance and share it throughout the application.
+- **Object Scope**: 
+  - `instanceVariable`: Belongs to the `MyService` object and exists as long as that object exists.
+  - `staticVariable`: Shared by all instances of `MyService` and exists for the lifetime of the class.
+  - `localVariable`: Only exists while `someMethod()` is running.
+
+#### Conclusion:
+
+- **Bean scope** is a framework-specific concept (like in Spring) that defines how many instances of a Bean exist and when they are created or destroyed in the application context.
+- **Object scope** is a general concept in OOP that determines the lifetime and visibility of an object based on where it is declared in the program.
 
 
 
